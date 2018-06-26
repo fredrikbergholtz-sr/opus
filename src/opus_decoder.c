@@ -820,6 +820,47 @@ int opus_decode(OpusDecoder *st, const unsigned char *data,
    return ret;
 }
 
+int opus_decode_s24(OpusDecoder *st, const unsigned char *data,
+	opus_int32 len, opus_int8 *pcm, int frame_size, int decode_fec)
+{
+	VARDECL(float, out);
+	int ret, i, j;
+	int nb_samples;
+	opus_int32 sample;
+	ALLOC_STACK;
+
+	if (frame_size <= 0)
+	{
+		RESTORE_STACK;
+		return OPUS_BAD_ARG;
+	}
+
+	if (data != NULL && len > 0 && !decode_fec)
+	{
+		nb_samples = opus_decoder_get_nb_samples(st, data, len);
+		if (nb_samples>0)
+			frame_size = IMIN(frame_size, nb_samples);
+		else
+			return OPUS_INVALID_PACKET;
+	}
+	celt_assert(st->channels == 1 || st->channels == 2);
+	ALLOC(out, frame_size*st->channels, float);
+
+	ret = opus_decode_native(st, data, len, out, frame_size, decode_fec, 0, NULL, 1);
+	if (ret > 0)
+	{
+		for (i = 0, j = 0; i < ret*st->channels; i++, j += 3)
+		{
+			sample = FLOAT2INT24(out[i]); // TODO: Add dither noise?
+			pcm[j + 0] = sample & 0xff;
+			pcm[j + 1] = (sample >> 8) & 0xff;
+			pcm[j + 2] = (sample >> 16) & 0xff;
+		}
+	}
+	RESTORE_STACK;
+	return ret;
+}
+
 int opus_decode_float(OpusDecoder *st, const unsigned char *data,
       opus_int32 len, opus_val16 *pcm, int frame_size, int decode_fec)
 {
