@@ -2257,6 +2257,7 @@ opus_int32 opus_encode_s24(OpusEncoder *st, const opus_int8 *pcm, int analysis_f
 	unsigned char *data, opus_int32 max_data_bytes)
 {
 	int i, j, ret;
+	opus_uint8 *p = pcm;
 	int frame_size;
 	VARDECL(float, in);
 	ALLOC_STACK;
@@ -2269,8 +2270,10 @@ opus_int32 opus_encode_s24(OpusEncoder *st, const opus_int8 *pcm, int analysis_f
 	}
 	ALLOC(in, frame_size*st->channels, float);
 
-	for (i = 0, j = 0; i<frame_size*st->channels; i++, j+=3)
-		in[i] = (1.0f / 8388608)*(opus_int32)((pcm[j] << 8 | pcm[j + 1] << 16 | pcm[j + 2] << 24) >> 8);
+	for (i = 0, j = 0; i < frame_size*st->channels; i++, j += 3)
+	{
+		in[i] = (1.0f / 8388608)*((opus_int32)(((p[j + 0] << 8) | (p[j + 1] << 16) | (p[j + 2] << 24)) >> 8));
+	}
 	ret = opus_encode_native(st, in, frame_size, data, max_data_bytes, 24,
 		pcm, analysis_frame_size, 0, -2, st->channels, downmix_int, 0);
 	RESTORE_STACK;
